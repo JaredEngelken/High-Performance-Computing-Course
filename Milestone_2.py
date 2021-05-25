@@ -76,9 +76,9 @@ def collision(var):
     u = np.zeros(f.shape)
     for i, cx,cy in zip(idxs,c_x, c_y):
         u[:,:,i] = (cx*vel_x + cy*vel_y) 
-    u = np.divide(np.sum(u,axis = 2),rho,out=np.zeros_like(np.sum(f*c_y,2)), where=rho!=0)       
+    u = np.divide(np.sum(u,axis = 2),rho,out=np.zeros_like(np.sum(f*c_y,2)), where=rho!=0) #this is the actual collision function       
     for i, cx,cy, w in zip(idxs ,c_x, c_y, weights):
-        Feq[:,:,i] = rho*w*(1 + 3*u + (9/2)*u**2 - 3 * (vel_x*2+vel_y**2)/2)
+        Feq[:,:,i] = rho*w*(1 + 3*u + (9/2)*u**2 - 3 * (vel_x*2+vel_y**2)/2) #this is the equilibrium function
     var += -(1.0/tau) * (var - Feq)    
     return u,Feq
 
