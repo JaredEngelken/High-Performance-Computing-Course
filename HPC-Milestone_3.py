@@ -79,13 +79,12 @@ def equilibrium(var):
 
 
 ### Initialize probability distribution with a shear wave
-# x_k = np.arange(nx)
-# wavevector = 2*np.pi/nx
-# uy_k = np.sin(wavevector*x_k, dtype=dtype)
+x_k = np.arange(Nx)
+wavevector = 2*np.pi/Nx
+uy_k = np.sin(wavevector*x_k, dtype=dtype)
+u_ck = np.array([np.zeros_like(uy_k), uy_k], dtype=dtype)
 
-# f = equilibrium(np.ones((nx, ny), dtype=dtype),
-#                     np.zeros_like(uy_k).reshape((nx, 1)),
-#                     uy_k.reshape((nx, 1)))
+f = equilibrium(np.ones((Nx, Ny), dtype=dtype), u_ck.reshape((2, Nx, 1)))
 
 
 
