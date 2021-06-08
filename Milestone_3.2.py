@@ -18,7 +18,7 @@ X,Y = np.meshgrid(range(Ny),range(Nx)) #create the plot grid
 c = np.array([[0,  1,  0, -1,  0,  1, -1, -1,  1],    # velocities, x components
               [0,  0,  1,  0, -1,  1,  1, -1, -1]]).T # velocities, y components
 weights = np.array([4/9,1/9,1/9,1/9,1/9,1/36,1/36,1/36,1/36]) # weights for each channel
-omega = 0.3  #relaxation rate #0.3 #A higher omega means a lower kinematic viscosity. ANything above 1.7 becomes unstable!
+omega = 0.3  #relaxation rate #0.3 #A higher omega means a lower kinematic viscosity. Anything above 1.7 becomes unstable!
 epsilon = 0.01 #pressure difference
 rho0 = 1.0 #rest density
 
@@ -69,35 +69,64 @@ def animate(frame_number, rhoAnim, plot):
     plot[0].remove()
     plot[0] = ax.plot_surface(X, Y, rhoAnim[:,:,frame_number], cmap="plasma")
 
+def animate1(frame_number, uAnim, plot):
+    plot[0].remove()
+    plot[0] = ax1.plot_surface(X, Y, uAnim[:,:,frame_number], cmap="plasma")
+
 ### Main loop
 amplitude = []
 rhoAnim = np.zeros((Nx, Ny, timestep))
+uAnim = np.zeros((Nx, Ny, timestep))
 for i in range(timestep):
     streaming(f)
     rho, ux_kl, uy_kl = collide(f, omega)
     rhoAnim[:,:,i] = rho
+    uAnim[:,:,i] = uy_kl
     # Fourier analysis
     amplitude += [(uy_kl[:, Ny//2]*uy_k).sum() * 2/Nx]
-    # if i%10 == 0:
-    #     fig = plt.figure(figsize=(Nx,Ny))
-    #     ax = fig.add_subplot(111, projection='3d')
-    #     ax.set_zlim3d(0.995,1.005)
-    #     ax.plot_wireframe(X,Y,rho) 
-    #     #ax.plot_surface(X,Y,uy)    
-    #     fig.savefig('C:\MSc Sustainable Materials - Polymers\High Performance Computing\Images'
-    #     +'\Figure '+str(i)+'.png', bbox_inches='tight')   # save the figure to file
+    #if i%10 == 0:
+        #fig = plt.figure(figsize=(Nx,Ny))
+        #ax = fig.add_subplot(111, projection='3d')
+        #ax.set_zlim3d(0.995,1.005)
+        #ax.plot_wireframe(X,Y,rho) 
+        #ax.set_zlim3d(-1,1)
+        #ax.plot_surface(X,Y,uy_kl)    
+        #plt.show()
+        #fig.savefig('C:\MSc Sustainable Materials - Polymers\High Performance Computing\Images'
+        #+'\Figure '+str(i)+'.png', bbox_inches='tight')   # save the figure to file
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
-
 plot = [ax.plot_surface(X, Y, rhoAnim[:,:,0], color='0.75', rstride=1, cstride=1)]
 ax.set_zlim3d(0.995,1.005)
+ax.set_xlabel('X Direction')
+ax.set_ylabel('Y Direction')
+ax.set_title('Shear Wave Density Decay')
 anim = animation.FuncAnimation(fig, animate, timestep, fargs=(rhoAnim, plot))
-
 fn = 'plot_surface_animation_funcanimation'
 anim.save('C:\MSc Sustainable Materials - Polymers\High Performance Computing\Images'
-    +'\Animation.gif',writer='imagemagick')
+    +'\Density_Animation.gif',writer='imagemagick')
+
+fig1 = plt.figure()
+ax1 = fig1.add_subplot(111, projection='3d')
+plot1 = [ax.plot_surface(X, Y, uAnim[:,:,0], color='0.75', rstride=1, cstride=1)]
+ax1.set_zlim3d(-1,1)
+ax1.set_xlabel('X Direction')
+ax1.set_ylabel('Y Direction')
+ax1.set_title('Shear Wave Velocity Decay')
+anim1 = animation.FuncAnimation(fig1, animate1, timestep, fargs=(uAnim, plot))
+fn1 = 'plot_surface_animation_funcanimation'
+anim1.save('C:\MSc Sustainable Materials - Polymers\High Performance Computing\Images'
+    +'\Velocity_Animation.gif',writer='imagemagick')
 
 # print(amplitude)
-# plt.plot(range(timestep),amplitude)
+fig2 = plt.figure(figsize=(8,8))
+fig2.subplots_adjust(top=0.8)
+ax2 = fig2.add_subplot(211)
+ax2.set_xlabel('Time')
+ax2.set_ylabel('Amplitude')
+ax2.set_title('Shear Wave Amplitude Decay')
+ax2.plot(range(timestep),amplitude)
+plt.savefig('C:\MSc Sustainable Materials - Polymers\High Performance Computing\Images'
+    +'\Amplitude.png',writer='imagemagick',bbox_inches='tight')
 # plt.show()
