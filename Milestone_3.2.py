@@ -11,8 +11,8 @@ import matplotlib.animation as animation
 
 dtype = np.float32 #data type
 timestep = 100 #number of animation iterations
-Nx = 30 #plot size in the x direction #15
-Ny = 30 #plot size in the y direction #10
+Nx = 15 #plot size in the x direction #15
+Ny = 10 #plot size in the y direction #10
 X,Y = np.meshgrid(range(Ny),range(Nx)) #create the plot grid
 
 c = np.array([[0,  1,  0, -1,  0,  1, -1, -1,  1],    # velocities, x components
@@ -75,6 +75,8 @@ def animate1(frame_number, uAnim, plot):
 
 ### Main loop
 amplitude = []
+amp = []
+viscosity = []
 rhoAnim = np.zeros((Nx, Ny, timestep))
 uAnim = np.zeros((Nx, Ny, timestep))
 for i in range(timestep):
@@ -84,6 +86,10 @@ for i in range(timestep):
     uAnim[:,:,i] = uy_kl
     # Fourier analysis
     amplitude += [(uy_kl[:, Ny//2]*uy_k).sum() * 2/Nx]
+    amp.append(amplitude/amplitude[0])
+    viscosity.append((np.log(amp[i])/((2*np.pi/Nx)**2*i)))
+
+
     ### Frame-by-Frame
     ### Comment this section out if printing the gifs
     # if i%10 == 0:
@@ -130,21 +136,20 @@ ax1.set_zlim3d(-1,1)
 ax1.set_xlabel('X Direction')
 ax1.set_ylabel('Y Direction')
 ax1.set_title('Shear Wave Velocity Decay')
-anim1 = animation.FuncAnimation(fig1, animate1, timestep, fargs=(uAnim, plot))
+anim1 = animation.FuncAnimation(fig1, animate1, timestep, fargs=(uAnim, plot1))
 fn1 = 'plot_surface_animation_funcanimation'
 anim1.save('C:\MSc Sustainable Materials - Polymers\High Performance Computing\Images'
     +'\Velocity_Animation.gif',writer='imagemagick')
 
-### Amplitude Decay Graph
+### Viscosity Amplitude Decay Graph
+v = np.full(timestep,(1/3)*(1/omega-.5))
 fig2 = plt.figure(figsize=(8,8))
 fig2.subplots_adjust(top=0.8)
 ax2 = fig2.add_subplot(211)
 ax2.set_xlabel('Time')
-ax2.set_ylabel('Amplitude')
+ax2.set_ylabel('Viscocity (Amplitude)')
 ax2.set_title('Shear Wave Amplitude Decay')
+ax2.plot(range(timestep),v)
 ax2.plot(range(timestep),amplitude)
 plt.savefig('C:\MSc Sustainable Materials - Polymers\High Performance Computing\Images'
     +'\Amplitude.png',writer='imagemagick',bbox_inches='tight')
-
-# plt.show()
-# print(amplitude)
