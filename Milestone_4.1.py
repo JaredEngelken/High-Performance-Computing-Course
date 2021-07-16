@@ -36,8 +36,7 @@ uy_k = np.sin(wavevector*x_k, dtype=dtype)
 rho = np.ones((Nx,Ny))    
 
 ux = np.zeros_like(uy_k).reshape((Nx, 1))
-u0 = np.zeros_like(uy_k).reshape((Nx, 1))
-uy = uy_k.reshape((Nx, 1))
+uy = np.zeros_like(uy_k).reshape((Nx, 1))
 
 # Directions
 D = IntEnum('D', 'E N W S NE NW SW SE')
@@ -129,10 +128,10 @@ def animate(frame_number, uxAnim, plot):
 ### Calculation
 # Definition of the probability density function of via calling equilibrium function
 # First Roadpoint - Set u = 0 & rho = p0 + epsilon (2pix/lx)
-f = equilibrium(rho, ux, u0)
+f = equilibrium(rho, ux, uy)
 
 uxAnim = np.zeros((Nx, Ny, timestep))
-uPlot = np.zeros((Nx, Ny, timestep))
+uxPlot = np.zeros((Nx, Ny, timestep))
 ### Plots
 for i in range(timestep):
     bounce_back(f, wall_vel)
@@ -140,7 +139,7 @@ for i in range(timestep):
     uxAnim[:,:,i] = ux_kl
 
     if i%20==0:
-        uPlot[:,:,i] = ux_kl
+        uxPlot[:,:,i] = ux_kl
 
         fig = plt.figure()
         ax = fig.add_subplot()
@@ -174,10 +173,10 @@ anim.save('C:\MSc Sustainable Materials - Polymers\High Performance Computing\Im
 
 fig3 = plt.figure()
 ax3 = fig3.add_subplot()
-ax3.set_xlabel('Y Direction')
+ax3.set_xlabel('X Direction')
 ax3.set_ylabel('Velocity')
 ax3.set_title('Velocity Profile Over Time')
 for j in range(timestep):
-    ax3.plot(range(Ny),uPlot[1,:,j])
+    ax3.plot(range(Ny),uxPlot[1,:,j])
 plt.savefig('C:\MSc Sustainable Materials - Polymers\High Performance Computing\Images'
     +'\MS4 Velocity Profile Over Time.png',writer='imagemagick',bbox_inches='tight')
