@@ -12,8 +12,8 @@ from mpi4py import MPI
 ### Set Parameters, define grid & set initialization values
 dtype = np.float32 #data type
 timestep = 1000 #number of animation iterations
-Nx = 100 #plot size in the x direction #15
-Ny = 100 #plot size in the y direction #10
+Nx = 300 #plot size in the x direction #15
+Ny = 300 #plot size in the y direction #10
 Y,X = np.meshgrid(range(Ny),range(Nx)) #create the plot grid
 
 c = np.array([[0,  1,  0, -1,  0,  1, -1, -1,  1],    # velocities, x components
@@ -273,7 +273,7 @@ for i in range(timestep):
     bounce_back(f, wall_vel)
     rho_kl, ux_kl, uy_kl = collision(f, omega)
 
-    if (i%20==0 and i != 0) or i == timestep-1:
+    if (i % 100 == 0 and i != 0) or i == timestep-1:
         save_mpiio(comm, 'ux_{}.npy'.format(i), ux_kl[without_ghosts_x, without_ghosts_y])
         save_mpiio(comm, 'uy_{}.npy'.format(i), uy_kl[without_ghosts_x, without_ghosts_y])
       
@@ -282,9 +282,15 @@ for i in range(timestep):
         
         nx, ny = ux_kl.shape
         
-        plt.figure()
+        plt.figure(figsize = (10,10))
         x_k = np.arange(nx)
         y_l = np.arange(ny)
+        plt.xlim((0,300))
+        plt.ylim((0,300))
+        plt.text(Nx+5,Ny/2,'right wall',color='blue',verticalalignment='center')
+        plt.text(0-40,Ny/2,'left wall',color='blue',verticalalignment='center')
+        plt.text(Nx/2-15,-15,'bottom wall',color='blue',verticalalignment='center')
+        plt.text(Nx/2-15,Ny+10,'sliding lid',color='blue',verticalalignment='center')        
         plt.streamplot(x_k, y_l, ux_kl.T, uy_kl.T)
         #plt.show()
         plt.savefig('Images/MS7 Velocity Profile (streamplot)' + str(i).zfill(4))
