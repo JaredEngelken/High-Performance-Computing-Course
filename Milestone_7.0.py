@@ -6,12 +6,12 @@ Python 3
 import numpy as np
 import matplotlib.pyplot as plt
 from enum import IntEnum
-import mpi4py as MPI
+from mpi4py import MPI
 
 
 ### Set Parameters, define grid & set initialization values
 dtype = np.float32 #data type
-timestep = 20 #number of animation iterations
+timestep = 1000 #number of animation iterations
 Nx = 100 #plot size in the x direction #15
 Ny = 100 #plot size in the y direction #10
 Y,X = np.meshgrid(range(Ny),range(Nx)) #create the plot grid
@@ -31,10 +31,9 @@ x_k = np.arange(Nx)
 wavevector = 2*np.pi/Nx
 uy_k = np.sin(wavevector*x_k, dtype=dtype)
 
-rho = np.ones((Nx,Ny))    
-
-ux = np.zeros_like(uy_k).reshape((Nx, 1))
-uy = np.zeros_like(uy_k).reshape((Nx, 1))
+#rho = np.ones((Nx,Ny))    
+#ux = np.zeros_like(uy_k).reshape((Nx, 1))
+#uy = np.zeros_like(uy_k).reshape((Nx, 1))
 
 # Directions
 D = IntEnum('D', 'E N W S NE NW SW SE')
@@ -148,6 +147,65 @@ def communicate(f_ikl):
                   recvbuf=recvbuf, source=top_src)
     f_ikl[:, :, 0] = recvbuf
 
+def save_mpiio(comm, fn, g_kl):
+    """
+    Write a global two-dimensional array to a single file in the npy format
+    using MPI I/O: https://docs.scipy.org/doc/numpy/neps/npy-format.html
+
+    Arrays written with this function can be read with numpy.load.
+
+    Parameters
+    ----------
+    comm
+        MPI communicator.
+    fn : str
+        File name.
+    g_kl : array_like
+        Portion of the array on this MPI processes. This needs to be a
+        two-dimensional array.
+    """
+    from numpy.lib.format import dtype_to_descr, magic
+    magic_str = magic(1, 0)
+
+    local_nx, local_ny = g_kl.shape
+    nx = np.empty_like(local_nx)
+    ny = np.empty_like(local_ny)
+
+    commx = comm.Sub((True, False))
+    commy = comm.Sub((False, True))
+    commx.Allreduce(np.asarray(local_nx), nx)
+    commy.Allreduce(np.asarray(local_ny), ny)
+
+    arr_dict_str = str({ 'descr': dtype_to_descr(g_kl.dtype),
+                         'fortran_order': False,
+                         'shape': (np.asscalar(nx), np.asscalar(ny)) })
+    while (len(arr_dict_str) + len(magic_str) + 2) % 16 != 15:
+        arr_dict_str += ' '
+    arr_dict_str += '\n'
+    header_len = len(arr_dict_str) + len(magic_str) + 2
+
+    offsetx = np.zeros_like(local_nx)
+    commx.Exscan(np.asarray(ny*local_nx), offsetx)
+    offsety = np.zeros_like(local_ny)
+    commy.Exscan(np.asarray(local_ny), offsety)
+
+    file = MPI.File.Open(comm, fn, MPI.MODE_CREATE | MPI.MODE_WRONLY)
+    if comm.Get_rank() == 0:
+        file.Write(magic_str)
+        file.Write(np.int16(len(arr_dict_str)))
+        file.Write(arr_dict_str.encode('latin-1'))
+    mpitype = MPI._typedict[g_kl.dtype.char]
+    filetype = mpitype.Create_vector(g_kl.shape[0], g_kl.shape[1], ny)
+    filetype.Commit()
+    file.Set_view(header_len + (offsety+offsetx)*mpitype.Get_size(),
+                  filetype=filetype)
+    file.Write_all(g_kl.copy())
+    filetype.Free()
+    file.Close()
+
+
+
+
 ### Parallelization
 size = MPI.COMM_WORLD.Get_size()
 rank = MPI.COMM_WORLD.Get_rank()
@@ -176,16 +234,16 @@ local_ny = Ny//ndy
 print("Local Nx = ", local_nx)
 print("Local Ny = ", local_ny)
 
-u1 = np.zeros(local_nx)
-u1.shape = (local_nx,1)
-print('U1 shape: ',u1.shape)
+ux = np.zeros(local_nx)
+ux.shape = (local_nx,1)
+print('ux shape: ',ux.shape)
 
-u2 = np.zeros(local_ny)
-u2.shape = (local_ny,1)
-print('U2 shape: ', u2.shape)
+uy = np.zeros(local_ny)
+uy.shape = (local_ny,1)
+print('uy shape: ', uy.shape)
 
-rho1=np.ones((local_nx, local_ny))
-print('Rho: ', rho1.shape)
+rho=np.ones((local_nx, local_ny))
+print('Rho: ', rho.shape)
 
 left_src, left_dst = comm.Shift(0, -1)
 right_src, right_dst = comm.Shift(0, 1)
@@ -225,6 +283,7 @@ print('Rank {} has domain coordinates {}x{} and a local grid of size {}x{} (incl
 
 
 
+
 ### Calculation
 # Definition of the probability density function of via calling equilibrium function
 # First Roadpoint - Set u = 0 & rho = p0 + epsilon (2pix/lx)
@@ -238,38 +297,62 @@ for i in range(timestep):
     communicate(f)
     bounce_back(f, wall_vel)
     rho_kl, ux_kl, uy_kl = collision(f, omega)
-    uxAnim[:,:,i] = ux_kl
-    uyAnim[:,:,i] = uy_kl
+#    uxAnim[:,:,i] = ux_kl
+#    uyAnim[:,:,i] = uy_kl
 
-    if i%20==0:
-        uxPlot[:,:,i] = ux_kl
-        fig = plt.figure()
-        ax = fig.add_subplot()
-        ax.text(Nx/2, Ny+1, 'Moving Wall', c = 'red', horizontalalignment = 'center')
-        # ax.text(Nx + 1, Ny/2, 'Outlet', c = 'blue',  verticalalignment='center')
-        # ax.text(0-6, Ny/2, 'Inlet', c = 'blue',  verticalalignment='center')
-        ax.text(Nx/2, 0 - 5, 'Bottom Wall', c = 'blue', horizontalalignment = 'center')
-        ax.quiver(X,Y,ux_kl,uy_kl)
-        plt.savefig('C:\MSc Sustainable Materials - Polymers\High Performance Computing\Images/MS7 Velocity Over Time' + str(i).zfill(4))
-
+    if i%20==0 and i != 0:
+        save_mpiio(comm, 'ux_{}.npy'.format(i), ux_kl[without_ghosts_x, without_ghosts_y])
+        save_mpiio(comm, 'uy_{}.npy'.format(i), uy_kl[without_ghosts_x, without_ghosts_y])
+#        uxPlot[:,:,i] = ux_kl
+#        fig = plt.figure()
+#        ax = fig.add_subplot()
+#        ax.text(Nx/2, Ny+1, 'Moving Wall', c = 'red', horizontalalignment = 'center')
+#        # ax.text(Nx + 1, Ny/2, 'Outlet', c = 'blue',  verticalalignment='center')
+#        # ax.text(0-6, Ny/2, 'Inlet', c = 'blue',  verticalalignment='center')
+#        ax.text(Nx/2, 0 - 5, 'Bottom Wall', c = 'blue', horizontalalignment = 'center')
+#        ax.quiver(X,Y,ux_kl,uy_kl)
+#        plt.savefig('C:\MSc Sustainable Materials - Polymers\High Performance Computing\Images/MS7 Velocity Over Time' + str(i).zfill(4))
+#
+#        
+#        fig1 = plt.figure()
+#        ax1 = fig1.add_subplot()
+#        ax1.text(Nx/2, Ny+1, 'Moving Wall', c = 'red', horizontalalignment = 'center')
+#        # ax1.text(Nx + 1, Ny/2, 'Outlet', c = 'blue',  verticalalignment='center')
+#        # ax1.text(0-6, Ny/2, 'Inlet', c = 'blue',  verticalalignment='center')
+#        ax1.text(Nx/2, 0 - 5, 'Bottom Wall', c = 'blue', horizontalalignment = 'center')
+#        xx = np.linspace(0,30)
+#        yy = np.linspace(0,30)
+#        ax1.streamplot(Y,X,ux_kl.T,uy_kl.T)
+#        plt.savefig('C:\MSc Sustainable Materials - Polymers\High Performance Computing\Images/MS7 Velocity Over Time (streamplot)' + str(i).zfill(4))
         
-        fig1 = plt.figure()
-        ax1 = fig1.add_subplot()
-        ax1.text(Nx/2, Ny+1, 'Moving Wall', c = 'red', horizontalalignment = 'center')
-        # ax1.text(Nx + 1, Ny/2, 'Outlet', c = 'blue',  verticalalignment='center')
-        # ax1.text(0-6, Ny/2, 'Inlet', c = 'blue',  verticalalignment='center')
-        ax1.text(Nx/2, 0 - 5, 'Bottom Wall', c = 'blue', horizontalalignment = 'center')
-        xx = np.linspace(0,30)
-        yy = np.linspace(0,30)
-        ax1.streamplot(Y,X,ux_kl.T,uy_kl.T)
-        plt.savefig('C:\MSc Sustainable Materials - Polymers\High Performance Computing\Images/MS7 Velocity Over Time (streamplot)' + str(i).zfill(4))
+        ux_kl = np.load('ux_{}.npy'.format(i))
+        uy_kl = np.load('uy_{}.npy'.format(i))
+        
+        nx, ny = ux_kl.shape
+        
+        plt.figure()
+        x_k = np.arange(nx)
+        y_l = np.arange(ny)
+        plt.streamplot(x_k, y_l, ux_kl.T, uy_kl.T)
+        #plt.show()
+        plt.savefig('Images/MS7 Velocity Profile (streamplot)' + str(i).zfill(4))
 
-fig3 = plt.figure()
-ax3 = fig3.add_subplot()
-ax3.set_xlabel('X Direction')
-ax3.set_ylabel('Velocity')
-ax3.set_title('Velocity Profile Over Time')
-for j in range(timestep):
-    ax3.plot(range(Ny),uxPlot[1,:,j])
-plt.savefig('C:\MSc Sustainable Materials - Polymers\High Performance Computing\Images'
-    +'\MS7 Velocity Profile Over Time.png',writer='Pillow',bbox_inches='tight')
+
+# Dump final stage of the simulation to a file
+#save_mpiio(comm, 'ux_{}.npy'.format(i), u_ckl[0, without_ghosts_x, without_ghosts_y])
+#save_mpiio(comm, 'uy_{}.npy'.format(i), u_ckl[1, without_ghosts_x, without_ghosts_y])
+
+#fig3 = plt.figure()
+#ax3 = fig3.add_subplot()
+#ax3.set_xlabel('X Direction')
+#ax3.set_ylabel('Velocity')
+#ax3.set_title('Velocity Profile Over Time')
+#for j in range(timestep):
+#    ax3.plot(range(Ny),uxPlot[1,:,j])
+#plt.savefig('C:\MSc Sustainable Materials - Polymers\High Performance Computing\Images'
+#    +'\MS7 Velocity Profile Over Time.png',writer='Pillow',bbox_inches='tight')
+
+
+
+
+
