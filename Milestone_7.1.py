@@ -12,8 +12,8 @@ from mpi4py import MPI
 ### Set Parameters, define grid & set initialization values
 dtype = np.float32 #data type
 timestep = 1000 #number of animation iterations
-Nx = 300 #plot size in the x direction #15
-Ny = 300 #plot size in the y direction #10
+Nx = 300 #plot size in the x direction
+Ny = 300 #plot size in the y direction
 Y,X = np.meshgrid(range(Ny),range(Nx)) #create the plot grid
 
 c = np.array([[0,  1,  0, -1,  0,  1, -1, -1,  1],    # velocities, x components
@@ -282,15 +282,16 @@ for i in range(timestep):
         
         nx, ny = ux_kl.shape
         
-        plt.figure(figsize = (10,10))
+        plt.figure()
         x_k = np.arange(nx)
         y_l = np.arange(ny)
-        plt.xlim((0,300))
-        plt.ylim((0,300))
-        plt.text(Nx+5,Ny/2,'right wall',color='blue',verticalalignment='center')
-        plt.text(0-40,Ny/2,'left wall',color='blue',verticalalignment='center')
-        plt.text(Nx/2-15,-15,'bottom wall',color='blue',verticalalignment='center')
-        plt.text(Nx/2-15,Ny+10,'sliding lid',color='blue',verticalalignment='center')        
+        plt.xlim((0,Nx))
+        plt.ylim((0,Ny))
+        plt.suptitle('Lattice Boltzmann Sliding-Lid Simulation')
+        plt.title('{}x{} size, {} time steps, {} omega, and {} wall speed'.format(Nx,Ny,timestep,omega,wall_vel))
+#        plt.text(Nx+5,Ny/2,'right wall',color='blue',verticalalignment='center')
+#        plt.text(0-60,Ny/2,'left wall',color='blue',verticalalignment='center')
+#        plt.text(Nx/2-15,-25,'bottom wall',color='blue',verticalalignment='center')
+#        plt.text(Nx/2-15,Ny+10,'sliding lid',color='blue',verticalalignment='center')        
         plt.streamplot(x_k, y_l, ux_kl.T, uy_kl.T)
-        #plt.show()
-        plt.savefig('Images/MS7 Velocity Profile (streamplot)' + str(i).zfill(4))
+        plt.savefig('Images/MS7 Velocity Profile (streamplot)' + str(i),bbox_inches='tight')
