@@ -7,11 +7,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 from enum import IntEnum
 from mpi4py import MPI
+import time
 
+###Start program timer
+starttime = time.time()
 
 ### Set Parameters, define grid & set initialization values
 dtype = np.float32 #data type
-timestep = 1000 #number of animation iterations
+timestep = 10000 #number of animation iterations
 Nx = 300 #plot size in the x direction
 Ny = 300 #plot size in the y direction
 Y,X = np.meshgrid(range(Ny),range(Nx)) #create the plot grid
@@ -19,7 +22,7 @@ Y,X = np.meshgrid(range(Ny),range(Nx)) #create the plot grid
 c = np.array([[0,  1,  0, -1,  0,  1, -1, -1,  1],    # velocities, x components
               [0,  0,  1,  0, -1,  1,  1, -1, -1]]).T # velocities, y components
 weights = np.array([4/9,1/9,1/9,1/9,1/9,1/36,1/36,1/36,1/36]) # weights for each channel
-omega = 0.5  #relaxation rate #0.3 #A higher omega means a lower kinematic viscosity. Anything above 1.7 becomes unstable!
+omega = 1.0  #relaxation rate #0.3 #A higher omega means a lower kinematic viscosity. Anything above 1.7 becomes unstable!
 epsilon = 0.001 #pressure difference
 wall_vel = 0.1 #wall speed
 D = IntEnum('D', 'E N W S NE NW SW SE') #directions
@@ -263,6 +266,9 @@ if bottom_dst >= 0:
 mpix, mpiy = comm.Get_coords(rank)
 print('Rank {} has domain coordinates {}x{} and a local grid of size {}x{} (including ghost cells).'.format(rank, mpix, mpiy, local_nx, local_ny))
 
+gridpoints = Nx*Ny
+print('Number of grid points: ', gridpoints)
+print('Time Steps: ', timestep)
 
 ### Calculation
 f = equilibrium(rho, ux, uy)
@@ -295,3 +301,5 @@ for i in range(timestep):
 #        plt.text(Nx/2-15,Ny+10,'sliding lid',color='blue',verticalalignment='center')        
         plt.streamplot(x_k, y_l, ux_kl.T, uy_kl.T)
         plt.savefig('Images/MS7 Velocity Profile (streamplot)' + str(i),bbox_inches='tight')
+
+print('Runtime: ',time.time()-starttime)
