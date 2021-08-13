@@ -4,11 +4,18 @@ This course at the University of Freiburg was inteded to give an introduction to
 
 All code was written by Jared Engelken with inspiration and assisstance from the lectures and works of Andreas Greiner, Jan Mees, and Lars Pastewka.
 
-Code is categorically named by its associated milestone:
+Code is categorically named by its associated milestone and the progress iteration:
+
 1: Streaming Operator
+
 2: Collision Operator
+
 3: Shear Wave Decay Simulation
+
 4: Couette Flow Simulation
+
 5: Poiseulle Flow Simulation
+
 6: Sliding-Lid Simulation
+
 7: Parallelization of the Sliding-Lid Simulation
