@@ -2,6 +2,34 @@
 HPC Milestone 7
 Jared Engelken
 Python 3
+
+
+Requirements:
+The code requires that several modules are installed:
+	NumPy
+	Matplotlib
+	mpi4py
+	time
+The code must also be run on a specific number of processors, namely any
+square number, e.g. 1, 4, 9, 16, 25, 36, 49, etc.
+
+Output:
+The code produces a series of streamplots for a box with a sliding lid
+for a given number of time steps at a given interval.
+
+Instructions:
+Variables and simulation specifications are given near the top of the
+code. Adjust these as needed.
+	timestep: how many iterations the simulation runs
+	Nx: size of the box in the x direction
+	Ny: size of the box in the y direction
+	omega: the relaxation rate (<1.7), affects the viscosity
+	wall_vel: the velocity of the sliding lid
+The interval of plots per time steps is given lower in the code within the 
+main loop and can be adjusted. See the line below:
+	if(i % x == 0 and i != 0) or i == timestep-1 #Adjust the number x
+For a Couette flow test, change "if True" to "if False" within the
+bounce_back() function.
 """
 import numpy as np
 import matplotlib.pyplot as plt
